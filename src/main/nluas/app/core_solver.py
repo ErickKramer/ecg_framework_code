@@ -37,6 +37,9 @@ def check_complexity(n):
 class CoreProblemSolver(CoreAgent):
 
     def __init__(self, args):
+        print('===========================================================')
+        print('Core Problem Solver!')
+        print('===========================================================')
         self.__path__ = os.getcwd() + "/src/main/nluas/"
         self.ntuple = None
         self.decoder = NtupleDecoder()
@@ -60,6 +63,8 @@ class CoreProblemSolver(CoreAgent):
         return parser
 
     def callback(self, ntuple):
+        # print('CoreSolver: ', ntuple) # Erick
+
         if self.is_quit(ntuple):
             return self.close()
         self.solve(ntuple)

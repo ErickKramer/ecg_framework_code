@@ -2,18 +2,18 @@
 ######################################################################
 #
 # File: bridge_client.py
-# 
+#
 # Initial Version: Dec 9, 2015 Adam Janin
 #
 # Bridge two Transport networks.
 #
 # BUGS:
-# 
-# Does not handle federations. 
+#
+# Does not handle federations.
 #
 # Does not handle non-Transport pyre communications.
 #
-# TODO: 
+# TODO:
 #
 # Handle federations. Filter out non-Transport pyre messages.
 #
@@ -182,7 +182,7 @@ def main(argv):
                     Global.proxies[name].send(channel, message)
             else:
                 logging.warning('Unexpected msg %s from client.'%(rec))
-            
+
         if Global.pyre.socket() in items:
             # Got a message on Pyre.
             event = Global.pyre.recv()
@@ -213,7 +213,7 @@ def main(argv):
                     logging.debug('Bridge client leaving channel %s'%(channel))
             elif eventtype == 'SHOUT':
                 channel = event[3].decode('utf-8')
-                
+
                 # Quit if federation QUIT message received.
                 if event[4] == u'QUIT':
                     logging.warning('Bridge client received a local QUIT message. Exiting.')
@@ -288,7 +288,7 @@ def parse_arguments(strs):
     parser = argparse.ArgumentParser(description='Start a bridge client that listens for Transport traffic and forwards to a bridge server. Version %s.'%(VERSION))
     parser.add_argument('-port', type=int, default=7417, help='Bridge server port. Defaults to %(default)s.')
     parser.add_argument('-host', default='ec2-54-153-1-22.us-west-1.compute.amazonaws.com', help='Bridge server host name. Defaults to %(default)s.')
-    parser.add_argument('-loglevel', 
+    parser.add_argument('-loglevel',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='WARNING',
                         help='Logging level (default %(default)s)')

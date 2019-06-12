@@ -31,11 +31,9 @@ class WordChecker(object):
     self.morph_files = []
     self.token_files = []
     self.read_prefs(prefs_path)
-
     self.tokens_in_grammar = set()
     self.tokens_info = dict()
     self.read_tokens()
-
     self.lemma_to_word = dict()
     self.word_to_lemma = dict()
     self.read_morphs()
@@ -77,23 +75,28 @@ class WordChecker(object):
 
   def read_morphs(self):
     for morph_file in self.morph_files:
-      with open(morph_file) as f:
-        for line in f:
-          morph = line.split()
-          word = morph[0]
-          for lemma, tense in zip(morph[1::2], morph[2::2]):
-            self.word_to_lemma[word] = lemma
-            tense_key = ''.join(sorted(re.split('/|,', tense)))
-            if lemma in self.lemma_to_word:
-              self.lemma_to_word[lemma][tense_key] = word
-            else:
-              self.lemma_to_word[lemma] = {tense_key : word}
+        with open(morph_file) as f:
+            for line in f:
+                morph = line.split()
+                word = morph[0]
+                for lemma, tense in zip(morph[1::2], morph[2::2]):
+                    self.word_to_lemma[word] = lemma
+                    tense_key = ''.join(sorted(re.split('/|,', tense)))
+                    if lemma in self.lemma_to_word:
+                        self.lemma_to_word[lemma][tense_key] = word
+                    else:
+                        self.lemma_to_word[lemma] = {tense_key : word}
 
   def load_lexicon(self, lexicon):
     for word in lexicon:
       self.lexicon.add(word)
 
   def check(self, sentence):
+    '''
+    * Tokenize, and POS-Tag the sentence
+    * Check the tagged_words in the sentence
+    * Returns a dictionary containing the checked, modified and failed words
+    '''
     tagged_words = nltk.pos_tag(nltk.word_tokenize(sentence))
     checked, modified, failed = [], [], []
     for i in range(len(tagged_words)):
