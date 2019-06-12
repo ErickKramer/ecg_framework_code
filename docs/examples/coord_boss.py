@@ -35,7 +35,7 @@ import six
 
 import sys
 import threading
-from lcas.Transport import Transport
+from nluas.Transport import Transport
 
 def main():
 

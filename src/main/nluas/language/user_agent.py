@@ -35,15 +35,21 @@ from six.moves import input
 class UserAgent(CoreAgent):
     def __init__(self, args):
         """args are execpted to be a prefs_path followed by the CoreAgent args"""
+        # print('===========================================================')
+        # print('User Agent!')
+        # print('===========================================================')
         self.prefs_path = args[0]
         CoreAgent.__init__(self, args[1:])
         self.initialize_UI()
         self.solve_destination = "{}_{}".format(self.federation, "ProblemSolver")
         self.speech_address = "{}_{}".format(self.federation, "SpeechAgent")
         self.text_address = "{}_{}".format(self.federation, "TextAgent")
+        # self.ui_destination = "{}_{}".format(self.federation, "AgentUI")
         self.transport.subscribe(self.solve_destination, self.callback)
         self.transport.subscribe(self.speech_address, self.speech_callback)
         self.transport.subscribe(self.text_address, self.text_callback)
+
+
 
     def setup_ui_parser(self):
         parser = argparse.ArgumentParser()
@@ -93,16 +99,25 @@ class UserAgent(CoreAgent):
         return final
 
     def process_input(self, msg):
+        '''
+        * Main control method of the UI Agent
+        * Feed the string msg to the ECG analyzer
+        * Passes the resulting SemSpec to the specializer to produce a new ntuple
+        * Returns a JSON-Encoded version of the ntuple
+        '''
+        # print('===========================================================')
+        # print('User Agent.process_input!')
+        # print('===========================================================')
         try:
             table = self.word_checker.check(msg)
             if any(table['failed']):
                 failures = self.word_checker.get_failed(table)
                 raise Exception("Unknown tokens in inputs: {}".format(failures))
 
-            msg = self.word_checker.join_checked(table['checked'])
-            full_parse = self.analyzer.full_parse(msg)
-            semspecs = full_parse['parse']
-            spans = full_parse['spans']
+            msg = self.word_checker.join_checked(table['checked']) # ERICK Simple msg string
+            full_parse = self.analyzer.full_parse(msg) # ERICK Not useful
+            semspecs = full_parse['parse'] # ERICK Not useful
+            spans = full_parse['spans'] # Erick Not useful
             index = 0
             for fs in semspecs:
                 try:
@@ -110,6 +125,12 @@ class UserAgent(CoreAgent):
                     matched = self.match_spans(span, msg)
                     self.specializer.set_spans(matched)
                     ntuple = self.specializer.specialize(fs)
+                    # self.extract_information(ntuple)
+                    print('===========================================================')
+                    print('ntuple ')
+                    print(ntuple)
+                    print('===========================================================')
+                    self.transport.send(self.text_address, ntuple) # Send the sempspec to the text agent
                     return ntuple
                 except Exception as e:
                     if self.verbose:
@@ -117,9 +138,72 @@ class UserAgent(CoreAgent):
                         self.output_stream(self.name, e)
                     index += 1
         except Exception as e:
+            self.transport.send(self.text_address, 'Failed')
+            print('===========================================================')
+            print('****** Error in UserAgent.process_input')
+            print('===========================================================')
             print(e)
 
+    def extract_information(self,ntuple):
+        # print('----> Slot ', ntuple['eventDescriptor']['eventProcess']['spg']['spgDescriptor'].keys()) <path, goal, source>
+
+        template = ntuple['eventDescriptor']['eventProcess']['template']
+        print('----> Template ', template)
+        '''
+        * MotionPath
+        '''
+
+        # self.transport.send(self.ui_destination, "***... Puff... Testing msg")
+        self.transport.send(self.text_address, ntuple)
+        msg = []
+        if template == 'MotionPath':
+            # intent = ntuple['eventDescriptor']['eventProcess']['actionary']
+            intent = 'go'
+            path = ntuple['eventDescriptor']['eventProcess']['spg']['spgDescriptor']['path']
+            source = ntuple['eventDescriptor']['eventProcess']['spg']['spgDescriptor']['source']
+            goal = ntuple['eventDescriptor']['eventProcess']['spg']['spgDescriptor']['goal']['objectDescriptor']['type']
+
+            print('----> Action ', intent)
+            print('----> Path ', path)
+            print('----> Source ', source)
+            print('----> Destination ', goal)
+            msg.append([intent],['destination', goal])
+
+        elif template == 'ObjectTransfer':
+            intent = 'take'
+            object = ntuple['eventDescriptor']['eventProcess']['theme']['objectDescriptor']['type']
+            print('----> Action ', intent)
+            print('----> Object ', object)
+
+        elif template == 'CauseEffect':
+            object = ntuple['eventDescriptor']['eventProcess']['causalProcess']['actedUpon']['objectDescriptor']['type']
+
+            intent = 'take'
+            print('----> Action ', intent)
+            print('----> Object ', object)
+
+        elif template == 'Manipulation':
+            object = ntuple['eventDescriptor']['eventProcess']['manipulated_entity']['objectDescriptor']['type']
+            intent = 'take'
+            print('----> Action ', intent)
+            print('----> Object ', object)
+
+        elif template == 'Perception':
+            try:
+                object = ntuple['eventDescriptor']['eventProcess']['content']['objectDescriptor']['type']
+            except:
+                print('*** Wrong keys ')
+            intent = 'find'
+            print('----> Action ', intent)
+            print('----> Object ', object)
+
+        else:
+            print('------> Dumb!')
+
+        # self.transport.send(self.text_address, msg)
+
     def output_stream(self, tag, message):
+        print("********************************")
         print("{}: {}".format(tag, message))
 
 
@@ -134,7 +218,10 @@ class UserAgent(CoreAgent):
 
 
     def text_callback(self, ntuple):
-        """ Processes text from a SpeechAgent. """
+        """ Processes text from a RobotTextAgent. """
+        # print('===========================================================')
+        # print('UserAgent.text_callback!!')
+        # print('===========================================================')
         specialize = True
         msg = ntuple['text']
         if self.is_quit(ntuple):
